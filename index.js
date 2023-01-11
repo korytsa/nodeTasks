@@ -8,47 +8,42 @@ const Port = 3000
 const path = './info.json';
 let dataUsers = JSON.parse(fs.readFileSync('users.json', 'utf8'));
 
-let userFind = false;
 
 app.use(express.json());
 
-app.use('/', function (req, res, next) {
-  if(!fs.existsSync(path)){
-    res.status(500).json({error: 'File not found'})
+const fileExsists = (req, res, next) => {
+  let filePath = fs.existsSync(path);
+  if(req.method === "POST"){
+    return filePath ? res.send('A file with the same name exists') : next()
   } 
-  next();
-})
+  return filePath ? next() : res.status(500).json({error: 'File not found'})
+}
 
-app.use('/users', function (req, res, next) {
-  userFind = false
+const userExsists = (req, res, next) => {
+  let userFind = false;
   dataUsers.users.forEach( user => {
     if(user.username === req.query.username && user.password === req.query.password ){
       userFind = true
     }
   });
-    userFind ? console.log('User found and password correct') : console.log('User not found')
-    next();
-}) 
+    return userFind ? next() : res.status(500).json({ message: "User not found" })
+}
 
-app.post('/users', (req, res) => {
-  if (!userFind){
-    dataUsers.users.push(req.query)
-    res.send(fs.writeFileSync('users.json', JSON.stringify(dataUsers)))
-  }
+app.post('/users', [userExsists, fileExsists], (req, res) => {
+  dataUsers.users.push(req.body)
+  res.send(fs.writeFileSync('users.json', JSON.stringify(dataUsers)))
 })
 
-app.post('/', (req, res) => {
+app.post('/', [fileExsists], (req, res) => {
     if (!fs.existsSync(path)) {
         fs.open('info.json', 'w', () => {
             fs.writeFileSync('info.json', JSON.stringify(req.body));
             res.send('File created')
         });
-    } else{
-        res.send('A file with the same name exists')
-    }
+    } 
 })
 
-app.get('/', (req, res) => {
+app.get('/', [userExsists, fileExsists], (req, res) => {
     let data = JSON.parse(fs.readFileSync('info.json', 'utf8'));
 
     Object.keys(data).length === 0 ? 
@@ -56,7 +51,7 @@ app.get('/', (req, res) => {
         : res.status(200).send(data)
 })
 
-app.put('/', (req, res) => {
+app.put('/', [userExsists, fileExsists], (req, res) => {
     let data = JSON.parse(fs.readFileSync('info.json', 'utf8'));
 
     for (key in req.body){
@@ -72,7 +67,7 @@ app.put('/', (req, res) => {
     res.send(data)
 })
 
-app.delete('/', (req, res) => {
+app.delete('/', [userExsists, fileExsists], (req, res) => {
     fs.unlink('info.json', (err) => {
         if (err) throw err;
         res.send('Deleted');
