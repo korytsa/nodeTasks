@@ -6,14 +6,35 @@ const Host = '127.0.0.1'
 const Port = 3000
 
 const path = './info.json';
+let dataUsers = JSON.parse(fs.readFileSync('users.json', 'utf8'));
+
+let userFind = false;
 
 app.use(express.json());
 
-app.use((req, res, next) => {
-    if(!fs.existsSync(path)){
-        res.status(500).json({error: 'File not found'})
-    } 
+app.use('/', function (req, res, next) {
+  if(!fs.existsSync(path)){
+    res.status(500).json({error: 'File not found'})
+  } 
+  next();
+})
+
+app.use('/users', function (req, res, next) {
+  userFind = false
+  dataUsers.users.forEach( user => {
+    if(user.username === req.query.username && user.password === req.query.password ){
+      userFind = true
+    }
+  });
+    userFind ? console.log('User found and password correct') : console.log('User not found')
     next();
+}) 
+
+app.post('/users', (req, res) => {
+  if (!userFind){
+    dataUsers.users.push(req.query)
+    res.send(fs.writeFileSync('users.json', JSON.stringify(dataUsers)))
+  }
 })
 
 app.post('/', (req, res) => {
