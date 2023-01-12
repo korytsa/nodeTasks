@@ -3,7 +3,7 @@ const app = express();
 let fs = require('fs');
 
 const Host = '127.0.0.1'
-const Port = 3000
+const Port = 3001
 
 const path = './info.json';
 let dataUsers = JSON.parse(fs.readFileSync('users.json', 'utf8'));
