@@ -1,77 +1,107 @@
 const express = require('express');
 const app = express();
 let fs = require('fs');
+const uniqid = require('uniqid'); 
+const User = require('./models/User');
+const Post = require('./models/Post');
 
 const Host = '127.0.0.1'
 const Port = 3001
 
-const path = './info.json';
-let dataUsers = JSON.parse(fs.readFileSync('users.json', 'utf8'));
-
+let allPosts = [];
 
 app.use(express.json());
 
-const fileExsists = (req, res, next) => {
-  let filePath = fs.existsSync(path);
-  if(req.method === "POST"){
-    return filePath ? res.send('A file with the same name exists') : next()
-  } 
-  return filePath ? next() : res.status(500).json({error: 'File not found'})
-}
+//create users
+(async () => {
+  await User.sync({force: true});
+  await User.bulkCreate([{
+    id: uniqid(),
+    username: 'John',
+    password: 'Hancock'
+  },{
+    id: uniqid(),
+    username: 'Ann',
+    password: '111'
+  },{
+    id: uniqid(),
+    username: 'Kate',
+    password: 'qwerty'
+  }])
+})();
 
 const userExsists = (req, res, next) => {
-  let userFind = false;
-  dataUsers.users.forEach( user => {
-    if(user.username === req.query.username && user.password === req.query.password ){
-      userFind = true
-    }
-  });
+  (async () => {
+    let userFind = false;
+
+    const users = await User.findAll();
+    users.forEach(user => {
+      if(user.dataValues.username === req.query.username && user.dataValues.password === req.query.password ){
+        userFind = true
+      }
+    });
+    
     return userFind ? next() : res.status(500).json({ message: "User not found" })
+  })()
 }
 
-app.post('/users', [userExsists, fileExsists], (req, res) => {
-  dataUsers.users.push(req.body)
-  res.send(fs.writeFileSync('users.json', JSON.stringify(dataUsers)))
-})
+const getAllPosts = (req, res, next) => {
+  allPosts = [];
 
-app.post('/', [fileExsists], (req, res) => {
-    if (!fs.existsSync(path)) {
-        fs.open('info.json', 'w', () => {
-            fs.writeFileSync('info.json', JSON.stringify(req.body));
-            res.send('File created')
-        });
-    } 
-})
+  (async () => {
+    const posts = await Post.findAll();
+    posts.forEach(post => {
+      allPosts.push(post.dataValues)
+    })
+  next();
+  })()
+}
 
-app.get('/', [userExsists, fileExsists], (req, res) => {
-    let data = JSON.parse(fs.readFileSync('info.json', 'utf8'));
-
-    Object.keys(data).length === 0 ? 
-        res.status(500).json({error: 'File is empty'})
-        : res.status(200).send(data)
-})
-
-app.put('/', [userExsists, fileExsists], (req, res) => {
-    let data = JSON.parse(fs.readFileSync('info.json', 'utf8'));
-
-    for (key in req.body){
-        Object.keys(data).forEach((item) => {
-            if (item === key){
-                item = req.body[key]
-            }else {
-                data[key] = req.body[key]
-            }
-        })
-    }
-    fs.writeFileSync('info.json', JSON.stringify(data));
-    res.send(data)
-})
-
-app.delete('/', [userExsists, fileExsists], (req, res) => {
-    fs.unlink('info.json', (err) => {
-        if (err) throw err;
-        res.send('Deleted');
+app.get('/users', (req, res) => {
+  (async () => {
+    const allUsers = [];
+    const users = await User.findAll();
+    users.forEach(user => {
+      allUsers.push(user.dataValues)
     });
+    res.send(allUsers)
+  })();
+})
+
+app.post('/users', [userExsists], (req, res) => {
+  (async () => {
+    await Post.sync({force: true});
+    await Post.create({
+      id: uniqid(),
+      title: req.body.title,
+      author: req.query.username
+    })
+    res.send('Post created')
+  })();
+})
+
+app.get('/',[getAllPosts], (req, res) => {
+  res.send(allPosts)
+})
+
+app.put('/', [userExsists, getAllPosts], (req, res) => {
+  (async () => {
+    await Post.create({
+      id: uniqid(),
+      title: req.body.title,
+      author: req.query.username
+    });
+    res.send('Post added')
+  })();
+})
+
+app.delete('/', [userExsists], (req, res) => {
+  (async () => {
+    await Post.destroy({
+      where: { author: req.query.username },
+    })
+    res.send(`All posts by ${req.query.username} have been deleted`)
+  })();
 })
 
 app.listen(Port, Host, () =>
