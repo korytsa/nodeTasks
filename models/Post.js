@@ -1,20 +1,18 @@
-const { DataTypes } = require('sequelize')
-const sequelize = require('../db.js')
-
-const Post = sequelize.define('Post', {
+module.exports = (sequelize, Sequelize) => {
+  const Post = sequelize.define('Post', {
     id: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        primaryKey: true,
+      type: Sequelize.STRING,
+      allowNull: false,
+      primaryKey: true,
     },
     title: {
-      type: DataTypes.STRING,
+      type: Sequelize.STRING,
       allowNull: false,
     },
     author: {
-        type: DataTypes.STRING,
+        type: Sequelize.STRING,
         allowNull: false,
       },
-  }
-)
-module.exports = Post
+  })
+  return Post;
+}

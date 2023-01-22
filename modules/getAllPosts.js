@@ -1,4 +1,6 @@
-const Post = require('../models/Post');
+const db = require('../db');
+
+const Post = db.posts;
 
 const getAllPosts = (req, res, next) => {
     req.allPosts = [];

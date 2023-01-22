@@ -1,20 +1,21 @@
-const { Sequelize } = require('sequelize')
+const dbConfig = require("./config");
 
-const sequelize = new Sequelize('firstBase', 'user', 'admin', {
-  host: 'localhost',
-  dialect: 'postgres',
-  operatorsAliases: 0,
-  port: 54320,
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 3000,
-    idle: 10000
-  }
+const Sequelize = require("sequelize");
+const sequelize = new Sequelize(dbConfig.dbName, dbConfig.username, dbConfig.password, {
+  host: dbConfig.host,
+  dialect: dbConfig.dialect,
+  operatorsAliases: dbConfig.operatorsAliases,
+  port: dbConfig.port
 });
 
-sequelize.authenticate()
-  .then(() => console.log('Connected.'))
-  .catch(error => console.error(error))
+const db = {};
 
-module.exports = sequelize
+db.Sequelize = Sequelize;
+db.sequelize = sequelize;
+
+db.posts = require("./models/Post")(sequelize, Sequelize);
+db.users = require("./models/User")(sequelize, Sequelize);
+
+db.users.sync({force: true});
+
+module.exports = db;
